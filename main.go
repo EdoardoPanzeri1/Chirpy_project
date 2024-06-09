@@ -20,13 +20,13 @@ func main() {
 	mux.Handle("/app/", fileServerHandler)
 
 	// Handle readiness endpoint
-	mux.HandleFunc("GET /healthz", handleReadiness)
+	mux.HandleFunc("GET /api/healthz", handleReadiness)
 
 	// Handle the count
-	mux.HandleFunc("GET /metrics", apiCfg.handleMetrics)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handleMetrics)
 
 	// Handle the reset
-	mux.HandleFunc("GET /reset", apiCfg.handleReset)
+	mux.HandleFunc("GET /api/reset", apiCfg.handleReset)
 
 	// Create a new http.Server and assign the mux to it
 	server := &http.Server{
