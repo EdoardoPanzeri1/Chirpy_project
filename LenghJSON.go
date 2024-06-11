@@ -3,12 +3,15 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 func handleLenght(w http.ResponseWriter, r *http.Request) {
 	type Chirpy struct {
 		Body string `json:"body"`
 	}
+
+	banWords := []string{"kerfuffle", "sharbert", "fornax"}
 
 	var chirp Chirpy
 	decoder := json.NewDecoder(r.Body)
@@ -23,7 +26,19 @@ func handleLenght(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseWithSuccess(w)
+	words := strings.Split(chirp.Body, " ")
+
+	for i, word := range words {
+		for _, banWord := range banWords {
+			if strings.ToLower(word) == banWord {
+				words[i] = "****"
+				break
+			}
+		}
+	}
+
+	cleanedBody := strings.Join(words, " ")
+	responseWithJSON(w, 200, map[string]string{"cleaned_body": cleanedBody})
 }
 
 func responseWithError(w http.ResponseWriter, code int, message string) {
@@ -34,9 +49,8 @@ func responseWithError(w http.ResponseWriter, code int, message string) {
 	w.Write(jsonResponse)
 }
 
-func responseWithSuccess(w http.ResponseWriter) {
-	response := map[string]bool{"valid": true}
-	jsonResponse, _ := json.Marshal(response)
+func responseWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	jsonResponse, _ := json.Marshal(payload)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResponse)
 }
