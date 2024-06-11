@@ -28,6 +28,9 @@ func main() {
 	// Handle the reset
 	mux.HandleFunc("GET /api/reset", apiCfg.handleReset)
 
+	// Handle the lenght of the messages
+	mux.HandleFunc("POST /api/validate_chirp", handleLenght)
+
 	// Create a new http.Server and assign the mux to it
 	server := &http.Server{
 		Addr:    "localhost:8080",
