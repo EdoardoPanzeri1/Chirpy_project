@@ -1,46 +1,47 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
+
+	"github.com/EdoardoPanzeri1/Chirpy_project/database"
 )
 
 type apiConfig struct {
 	fileserverHits int
+	DB             *database.DB
 }
 
 func main() {
-	apiCfg := &apiConfig{fileserverHits: 0}
+	const filepathRoot = "."
+	const port = "8080"
 
-	// Create a new ServeMux
+	db, err := database.NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	apiCfg := apiConfig{
+		fileserverHits: 0,
+		DB:             db,
+	}
+
 	mux := http.NewServeMux()
+	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	mux.Handle("/app/*", fsHandler)
 
-	// Wrap the handler with middleware
-	fileServerHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
-	mux.Handle("/app/", fileServerHandler)
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /api/reset", apiCfg.handlerReset)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsRetrieve)
 
-	// Handle readiness endpoint
-	mux.HandleFunc("GET /api/healthz", handleReadiness)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 
-	// Handle the count
-	mux.HandleFunc("GET /admin/metrics", apiCfg.handleMetrics)
-
-	// Handle the reset
-	mux.HandleFunc("GET /api/reset", apiCfg.handleReset)
-
-	// Handle the lenght of the messages
-	mux.HandleFunc("POST /api/validate_chirp", handleLenght)
-
-	// Create a new http.Server and assign the mux to it
-	server := &http.Server{
-		Addr:    "localhost:8080",
+	srv := &http.Server{
+		Addr:    ":" + port,
 		Handler: mux,
 	}
 
-	// Start the server and check for errors
-	fmt.Println("Starting server on :8080")
-	err := server.ListenAndServe()
-	if err != nil {
-		fmt.Println("Error starting server: ", err)
-	}
+	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
+	log.Fatal(srv.ListenAndServe())
 }
