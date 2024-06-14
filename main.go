@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -29,15 +28,17 @@ func main() {
 
 	mux := http.NewServeMux()
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
-	mux.Handle("/app/", fsHandler)
+	mux.Handle("/app/*", fsHandler)
 
-	mux.HandleFunc("/api/healthz", handlerReadiness)
-	mux.HandleFunc("/api/reset", apiCfg.handlerReset)
-	mux.HandleFunc("/api/chirps", apiCfg.handlerChirps)
-	mux.HandleFunc("/api/chirps/", apiCfg.handlerChirpsGet)
-	mux.HandleFunc("/api/users", apiCfg.handlerUserCreate)
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /api/reset", apiCfg.handlerReset)
+	mux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
+	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsRetrieve)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGet)
 
-	mux.HandleFunc("/admin/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -46,45 +47,4 @@ func main() {
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		cfg.handlerChirpsCreate(w, r)
-	case http.MethodGet:
-		cfg.handlerChirpsRetrieve(w, r)
-	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-type User struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
-}
-
-func (cfg *apiConfig) handlerUserCreate(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Email string `json:"email"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
-		return
-	}
-
-	user, err := cfg.DB.CreateUser(params.Email)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't create user")
-		return
-	}
-
-	respondWithJSON(w, http.StatusCreated, User{
-		ID:    user.ID,
-		Email: user.Email,
-	})
 }
