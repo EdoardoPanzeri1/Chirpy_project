@@ -1,4 +1,4 @@
-CHIRPY API
+CHIRPY API/n
 The Chirpy API project is a robust implementation of user authentication using JSON Web Tokens (JWT). This API serves as a foundation for secure user authentication in modern web and mobile applications. With a focus on reliability and security, it ensures that user sessions are managed efficiently.
 
 KEY FEATURES
